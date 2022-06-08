@@ -14,15 +14,15 @@ Among other things this means you can use it free of charge.
 
 ### Installation
 
-FontTools requires [Python](http://www.python.org/download/) 2.7, 3.4 or later.
+FontTools requires [Python](http://www.python.org/download/) 2.7, 3.4 or later. The additional tools (`pyftinspect` and `pyftanalysis`) provided in this fork require Python 2.7.
 
-The package is listed in the Python Package Index (PyPI), so you can install it with [`pip`](https://pip.pypa.io):
+The upstream package is listed in the Python Package Index (PyPI), so you can install it with [`pip`](https://pip.pypa.io):
 
 ```sh
 pip install fonttools
 ```
 
-If you would like to contribute to its development, you can clone the repository from Github, install the package in 'editable' mode and modify the source code in place. We recommend creating a virtual environment, using [`virtualenv`](https://virtualenv.pypa.io) or Python 3 [`venv`](https://docs.python.org/3/library/venv.html) module.
+If you would like to contribute to its development or use the additional tools provided by this fork, you can clone the repository from Github, install the package in 'editable' mode and modify the source code in place. We recommend creating a virtual environment, using [`virtualenv`](https://virtualenv.pypa.io).
 
 ```sh
 # download the source code to 'fonttools' folder
@@ -41,6 +41,8 @@ fonttools-venv\Scripts\activate.bat
 # install in 'editable' mode
 pip install -e .
 ```
+
+This will add the scripts listed in [setup.py](https://github.com/wenzhuman/fonttools/blob/master/setup.py#L70).
 
 ### TTX – From OpenType and TrueType to XML and Back
 
