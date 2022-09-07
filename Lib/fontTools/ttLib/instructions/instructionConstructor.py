@@ -32,6 +32,8 @@ class instructionConstructor():
                     break
             if has_data:
                 self.typed_instruction.add_data(Data(data))
+        if hasattr(self.instruction, "lineNumber"):
+            self.typed_instruction.lineNumber = self.instruction.lineNumber
     def construct(self,idClasses, builderName):
         targetClass = getattr(idClasses, builderName)
         return targetClass()

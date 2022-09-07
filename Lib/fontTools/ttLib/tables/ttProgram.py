@@ -198,9 +198,13 @@ WORD_SUFFIX = "/* word */"
 
 def _skipWhite(data, pos):
 	m = _whiteRE.match(data, pos)
+	numNewlines = m.group(0).count('\n')
 	newPos = m.regs[0][1]
 	assert newPos >= pos
-	return newPos
+	return newPos, numNewlines
+
+class IntWithLineNumber(int): pass
+class StringWithLineNumber(unicode): pass
 
 
 class Program(object):
@@ -279,20 +283,30 @@ class Program(object):
 	def fromXML(self, name, attrs, content, ttFont, preserveWidths=False):
 		if name == "assembly":
 			self.fromAssembly(strjoin(content))
-			self._assemble(preserveWidths)
+			lineNums = []
+			for c in content:
+				lineNums.append(c.lineNumber)
+			self._assemble(preserveWidths, lineNums)
 			del self.assembly
 		else:
 			assert name == "bytecode"
 			self.fromBytecode(readHex(content))
 
-	def _assemble(self, preserveWidths=False):
+	def _assemble(self, preserveWidths=False, lineNums = None):
+		lineNumIndex = 0
+		def currentLineNum():
+			if lineNums is None:
+				return None
+			return lineNums[0] + lineNumIndex
+
 		assembly = self.assembly
 		if isinstance(assembly, type([])):
 			assembly = ' '.join(assembly)
 		bytecode = []
 		push = bytecode.append
 		lenAssembly = len(assembly)
-		pos = _skipWhite(assembly, 0)
+		pos, numNewlines = _skipWhite(assembly, 0)
+		lineNumIndex += numNewlines
 		while pos < lenAssembly:
 			m = _tokenRE.match(assembly, pos)
 			if m is None:
@@ -300,13 +314,17 @@ class Program(object):
 			dummy, mnemonic, arg, number, comment = m.groups()
 			pos = m.regs[0][1]
 			if comment:
-				pos = _skipWhite(assembly, pos)
+				pos, numNewlines = _skipWhite(assembly, pos)
+				lineNumIndex += numNewlines
 				continue
 
 			arg = arg.strip()
+			opLineNumber = currentLineNum()
 			if mnemonic.startswith("INSTR"):
 				# Unknown instruction
 				op = int(mnemonic[5:])
+				op = IntWithLineNumber(op)
+				op.lineNumber = opLineNumber
 				push(op)
 			elif mnemonic not in ("PUSH", "NPUSHB", "NPUSHW", "PUSHB", "PUSHW"):
 				op, argBits, name = mnemonicDict[mnemonic]
@@ -314,13 +332,18 @@ class Program(object):
 					raise tt_instructions_error("Incorrect number of argument bits (%s[%s])" % (mnemonic, arg))
 				if arg:
 					arg = binary2num(arg)
-					push(op + arg)
+					op = IntWithLineNumber(op + arg)
+					op.lineNumber = opLineNumber
+					push(op)
 				else:
+					op = IntWithLineNumber(op)
+					op.lineNumber = opLineNumber
 					push(op)
 			else:
 				args = []
 				argIsWord = []
-				pos = _skipWhite(assembly, pos)
+				pos, numNewlines = _skipWhite(assembly, pos)
+				lineNumIndex += numNewlines
 				while pos < lenAssembly:
 					m = _tokenRE.match(assembly, pos)
 					if m is None:
@@ -329,7 +352,8 @@ class Program(object):
 					if number is None and comment is None:
 						break
 					pos = m.regs[0][1]
-					pos = _skipWhite(assembly, pos)
+					pos, numNewlines = _skipWhite(assembly, pos)
+					lineNumIndex += numNewlines
 					comment_with_m_match = _tokenRE.match(assembly, pos)
 					cwm = comment_with_m_match.groups()[4]
 					if comment is not None:
@@ -356,15 +380,27 @@ class Program(object):
 							if nWords <= 8:
 								op, argBits, name = streamMnemonicDict["PUSHW"]
 								op = op + nWords - 1
+								op = IntWithLineNumber(op)
+								op.lineNumber = opLineNumber
 								push(op)
 							else:
 								op, argBits, name = streamMnemonicDict["NPUSHW"]
+								op = IntWithLineNumber(op)
+								op.lineNumber = opLineNumber
 								push(op)
+								nWords = IntWithLineNumber(nWords)
+								nWords.lineNumber = currentLineNum()
 								push(nWords)
 							for value in args[:nWords]:
 								assert -32768 <= value < 32768, "PUSH value out of range %d" % value
-								push((value >> 8) & 0xff)
-								push(value & 0xff)
+								data = (value >> 8) & 0xff
+								data = IntWithLineNumber(data)
+								data.lineNumber = currentLineNum()
+								push(data)
+								data = value & 0xff
+								data = IntWithLineNumber(data)
+								data.lineNumber = currentLineNum()
+								push(data)
 
 						# Write bytes
 						if nBytes:
@@ -372,12 +408,20 @@ class Program(object):
 							if nBytes <= 8:
 								op, argBits, name = streamMnemonicDict["PUSHB"]
 								op = op + nBytes - 1
+								op = IntWithLineNumber(op)
+								op.lineNumber = opLineNumber
 								push(op)
 							else:
 								op, argBits, name = streamMnemonicDict["NPUSHB"]
+								op = IntWithLineNumber(op)
+								op.lineNumber = opLineNumber
 								push(op)
+								nBytes = IntWithLineNumber(nBytes)
+								nBytes.lineNumber = currentLineNum()
 								push(nBytes)
 							for value in args[nWords:nWords+nBytes]:
+								value = IntWithLineNumber(value)
+								value.lineNumber = currentLineNum()
 								push(value)
 
 						nTotal = nWords + nBytes
@@ -392,26 +436,44 @@ class Program(object):
 					if mnemonic[0] != "N":
 						assert nArgs <= 8, nArgs
 						op = op + nArgs - 1
+						op = IntWithLineNumber(op)
+						op.lineNumber = opLineNumber
 						push(op)
 					else:
 						assert nArgs < 256
+						op = IntWithLineNumber(op)
+						op.lineNumber = opLineNumber
 						push(op)
+						nArgs = IntWithLineNumber(nArgs)
+						nArgs.lineNumber = currentLineNum()
 						push(nArgs)
 					if words:
 						for value in args:
 							assert -32768 <= value < 32768, "PUSHW value out of range %d" % value
-							push((value >> 8) & 0xff)
-							push(value & 0xff)
+							data = (value >> 8) & 0xff
+							data = IntWithLineNumber(data)
+							data.lineNumber = currentLineNum()
+							push(data)
+							data = value & 0xff
+							data = IntWithLineNumber(data)
+							data.lineNumber = currentLineNum()
+							push(data)
 					else:
 						for value in args:
 							assert 0 <= value < 256, "PUSHB value out of range %d" % value
+							value = IntWithLineNumber(value)
+							value.lineNumber = currentLineNum()
 							push(value)
 
-			pos = _skipWhite(assembly, pos)
+			pos, numNewlines = _skipWhite(assembly, pos)
+			lineNumIndex += numNewlines
 
 		if bytecode:
 			assert max(bytecode) < 256 and min(bytecode) >= 0
 		self.bytecode = array.array("B", bytecode)
+		self.lineNums = []
+		for b in bytecode:
+			self.lineNums.append(b.lineNumber)
 
 	def _disassemble(self, preserve=False):
 		assembly = []
@@ -420,6 +482,7 @@ class Program(object):
 		numBytecode = len(bytecode)
 		while i < numBytecode:
 			op = bytecode[i]
+			opLineNumber = self.lineNums[i]
 			try:
 				mnemonic, argBits, argoffset, name = opcodeDict[op]
 			except KeyError:
@@ -458,18 +521,33 @@ class Program(object):
 						mnemonic = "PUSH"
 					nValues = len(values)
 					if nValues == 1:
-						assembly.append("%s[ ]	/* 1 value pushed */" % mnemonic)
+						asm = "%s[ ]	/* 1 value pushed */" % mnemonic
+						asm = StringWithLineNumber(asm)
+						asm.lineNumber = opLineNumber
+						assembly.append(asm)
 					else:
-						assembly.append("%s[ ]	/* %s values pushed */" % (mnemonic, nValues))
+						asm = "%s[ ]	/* %s values pushed */" % (mnemonic, nValues)
+						asm = StringWithLineNumber(asm)
+						asm.lineNumber = opLineNumber
+						assembly.append(asm)
 					assembly.extend(values)
 				else:
-					assembly.append("INSTR%d[ ]" % op)
+					asm = "INSTR%d[ ]" % op
+					asm = StringWithLineNumber(asm)
+					asm.lineNumber = opLineNumber
+					assembly.append(asm)
 					i = i + 1
 			else:
 				if argBits:
-					assembly.append(mnemonic + "[%s]	/* %s */" % (num2binary(op - argoffset, argBits), name))
+					asm = mnemonic + "[%s]	/* %s */" % (num2binary(op - argoffset, argBits), name)
+					asm = StringWithLineNumber(asm)
+					asm.lineNumber = opLineNumber
+					assembly.append(asm)
 				else:
-					assembly.append(mnemonic + "[ ]	/* %s */" % name)
+					asm = mnemonic + "[ ]	/* %s */" % name
+					asm = StringWithLineNumber(asm)
+					asm.lineNumber = opLineNumber
+					assembly.append(asm)
 				i = i + 1
 		self.assembly = assembly
 

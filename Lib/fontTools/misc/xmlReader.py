@@ -11,6 +11,7 @@ import logging
 log = logging.getLogger(__name__)
 
 class TTXParseError(Exception): pass
+class StringWithLineNumber(unicode): pass
 
 BUFSIZE = 0x4000
 
@@ -56,6 +57,7 @@ class XMLReader(object):
 		parser.StartElementHandler = self._startElementHandler
 		parser.EndElementHandler = self._endElementHandler
 		parser.CharacterDataHandler = self._characterDataHandler
+		self.parser = parser
 
 		pos = 0
 		while True:
@@ -125,6 +127,8 @@ class XMLReader(object):
 
 	def _characterDataHandler(self, data):
 		if self.stackSize > 1:
+			data = StringWithLineNumber(data)
+			data.lineNumber = self.parser.CurrentLineNumber
 			self.contentStack[-1].append(data)
 
 	def _endElementHandler(self, name):

@@ -1152,9 +1152,9 @@ class Executor(object):
         while self.current_instruction is not None:
             logger.info("     program_stack is %s" % (str(map(lambda s:s.eval(False), self.environment.program_stack))))
             if self.current_instruction.data is not None:
-                logger.info("[pc] %s->%s|%s",self.current_instruction.id, self.current_instruction.mnemonic,map(lambda x:x.value, self.current_instruction.data))
+                logger.info("[pc] [%d] %s->%s|%s",self.current_instruction.lineNumber,self.current_instruction.id, self.current_instruction.mnemonic,map(lambda x:x.value, self.current_instruction.data))
             else:
-                logger.info("[pc] %s->%s",self.current_instruction.id,self.current_instruction.mnemonic)
+                logger.info("[pc] [%d] %s->%s",self.current_instruction.lineNumber,self.current_instruction.id,self.current_instruction.mnemonic)
             logger.info("     succs are %s", self.current_instruction.successors)
             logger.info("     call_stack len is %s", len(self.call_stack))
 
