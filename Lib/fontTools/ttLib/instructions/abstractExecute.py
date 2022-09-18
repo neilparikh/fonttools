@@ -10,6 +10,28 @@ class IdentifierGenerator(object):
 logger = logging.getLogger(" ")
 identifierGenerator = IdentifierGenerator()
 
+class CFGNode():
+    def __init__(self):
+        self.instructions = []
+        self.successors = []
+        self.i = self.instructions
+        self.s = self.successors
+
+    def add_instruction(self, inst):
+        self.instructions.append(inst)
+
+    def partition_at(self, inst, inst_CFG_mapping):
+        index = self.instructions.index(inst)
+        if index is None:
+            raise
+        second_CFG = CFGNode()
+        second_CFG.instructions = self.instructions[index:]
+        self.instructions = self.instructions[:index]
+        second_CFG.successors = self.successors
+        self.successors = [second_CFG]
+        for inst in second_CFG:
+            inst_CFG_mapping[inst] = second_CFG
+
 class Environment(object):
     """Abstractly represents the global environment at a single point in time.
 
@@ -1148,8 +1170,15 @@ class Executor(object):
 
         self.if_else_stack = []
         self.environment.minimum_stack_depth = 0
+        self.current_CFG_block = CFGNode()
+        self.root_CFG_block = self.current_CFG_block
+        self.parent_CFG_block = None
+        self.instruction_to_CFG = {}
 
         while self.current_instruction is not None:
+            if self.current_instruction.mnemonic not in ['IF', 'ELSE', 'EIF']:
+                self.current_CFG_block.add_instruction(self.current_instruction)
+            self.instruction_to_CFG[self.current_instruction] = self.current_CFG_block
             logger.info("     program_stack is %s" % (str(map(lambda s:s.eval(False), self.environment.program_stack))))
             if self.current_instruction.data is not None:
                 logger.info("[pc] %s->%s|%s",self.current_instruction.id, self.current_instruction.mnemonic,map(lambda x:x.value, self.current_instruction.data))
@@ -1200,6 +1229,11 @@ class Executor(object):
                                               len(self.if_else_stack) + 1)
 
                     self.if_else_stack.append(self.If_else_stack(newBlock, self.current_instruction, 0))
+                newCFGNode = CFGNode()
+                if self.parent_CFG_block is None:
+                    self.parent_CFG_block = self.current_CFG_block
+                self.parent_CFG_block.successors.append(newCFGNode)
+                self.current_CFG_block = newCFGNode
             elif self.current_instruction.mnemonic == 'ELSE':
                 is_reexecuting = True
                 block = self.if_else_stack[-1].IR
@@ -1220,6 +1254,11 @@ class Executor(object):
                     block.if_instructions = []
                     block.else_instructions = []
                     ir = [block]
+                    newCFGNode = CFGNode()
+                    for node in self.parent_CFG_block.successors:
+                        node.successors.append(newCFGNode)
+                    self.current_CFG_block = newCFGNode
+                    self.parent_CFG_block = None
 
             if store_env:
                 if not is_reexecuting and self.current_instruction.id in self.stored_environments:
@@ -1319,3 +1358,4 @@ class Executor(object):
             if inst not in self.ignored_insts:
                 intermediateCodes.extend(self.bytecode2ir[inst.id])
         self.bytecodeContainer.IRs[tag] = self.fixupDestsToIR(intermediateCodes)
+        import pdb; pdb.set_trace()
