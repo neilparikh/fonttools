@@ -2,6 +2,7 @@ from fontTools.ttLib.data import dataType
 import logging
 import copy
 import IntermediateCode as IR
+from graph import Graph
 
 class IdentifierGenerator(object):
     def generateIdentifier(self, tag, number):
@@ -31,6 +32,27 @@ class CFGNode():
         self.successors = [second_CFG]
         for inst in second_CFG:
             inst_CFG_mapping[inst] = second_CFG
+
+def renderCFG(block):
+    blockToNode = {}
+    def recurse(block, g):
+        if block in blockToNode:
+            return blockToNode[block]
+        lines = list(map(repr, block.instructions))
+        node = g.addNode(lines)
+        for successor in block.successors:
+            if len(successor.instructions) == 0:
+                # TODO: exclude empty blocks when generating the CFG itself
+                continue
+            childNode = recurse(successor, g)
+            g.addEdge(node, childNode)
+        blockToNode[block] = node
+        return node
+
+    g = Graph()
+    recurse(block, g)
+    print(g.render()) # TODO
+    return g
 
 class Environment(object):
     """Abstractly represents the global environment at a single point in time.
@@ -1177,6 +1199,8 @@ class Executor(object):
 
         while self.current_instruction is not None:
             if self.current_instruction.mnemonic not in ['IF', 'ELSE', 'EIF']:
+                # TODO: for node exits, we should show what the conidtion is/why the exit is happening
+                # Ie. IF, JMPR etc.
                 self.current_CFG_block.add_instruction(self.current_instruction)
             self.instruction_to_CFG[self.current_instruction] = self.current_CFG_block
             logger.info("     program_stack is %s" % (str(map(lambda s:s.eval(False), self.environment.program_stack))))
@@ -1358,4 +1382,5 @@ class Executor(object):
             if inst not in self.ignored_insts:
                 intermediateCodes.extend(self.bytecode2ir[inst.id])
         self.bytecodeContainer.IRs[tag] = self.fixupDestsToIR(intermediateCodes)
-        import pdb; pdb.set_trace()
+
+        renderCFG(self.root_CFG_block)
