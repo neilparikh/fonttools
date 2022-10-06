@@ -27,13 +27,30 @@ def get_actual_output(test_name):
 
 
 class TestCOI(unittest.TestCase):
-    def test_FreeMono_simple(self):
-        test_name = "FreeMono-simple"
+    def common(self, test_name):
         actual = get_actual_output(test_name)
         with open('TestData/%s.ttx.coi' % test_name) as f:
             expected = f.read()
             self.assertEqual(actual, expected,
                              "output is different for %s" % test_name)
+
+    def test_FreeMono_simple(self):
+        self.common("FreeMono-simple")
+
+    def test_FreeMono_call_endf(self):
+        self.common("FreeMono-call-endf")
+
+    def test_FreeMono_empty_fdef(self):
+        self.common("FreeMono-empty-fdef")
+
+    def test_FreeMono_gfv(self):
+        self.common("FreeMono-gfv")
+
+    def test_FreeMono_max_no_simplify(self):
+        self.common("FreeMono-max-no-simplify")
+
+    def test_FreeMono_max(self):
+        self.common("FreeMono-max")
 
 def regen_expected(test_name):
     actual = get_actual_output(test_name)
