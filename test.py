@@ -16,7 +16,7 @@ def get_actual_output(test_name):
     sys.stderr = open(os.devnull, 'wb')
     sys.stdout = StringIO()
 
-    analysis.main(["-ifv", "TestData/%s.ttx" % test_name])
+    analysis.main(["-ifp", "TestData/%s.ttx" % test_name])
     output = sys.stdout.getvalue()
 
     sys.stderr.close()
