@@ -30,14 +30,14 @@ class TestCOI(unittest.TestCase):
     def test_FreeMono_simple(self):
         test_name = "FreeMono-simple"
         actual = get_actual_output(test_name)
-        with open('TestData/%s.coi' % test_name) as f:
+        with open('TestData/%s.ttx.coi' % test_name) as f:
             expected = f.read()
             self.assertEqual(actual, expected,
                              "output is different for %s" % test_name)
 
 def regen_expected(test_name):
     actual = get_actual_output(test_name)
-    with open('TestData/%s.coi' % test_name, "w") as f:
+    with open('TestData/%s.ttx.coi' % test_name, "w") as f:
         f.write(actual)
 
 
