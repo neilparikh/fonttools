@@ -52,6 +52,19 @@ class TestCOI(unittest.TestCase):
     def test_FreeMono_max(self):
         self.common("FreeMono-max")
 
+    def test_FreeMono_jmpr(self):
+        self.common("FreeMono-jmpr")
+
+    def test_FreeMono_jrot_jrof(self):
+        self.common("FreeMono-jrot-jrof")
+
+    def test_FreeMono_pop(self):
+        self.common("FreeMono-pop")
+
+    def test_FreeMono_simple_if(self):
+        self.common("FreeMono-simple-if")
+
+
 def regen_expected(test_name):
     actual = get_actual_output(test_name)
     with open('TestData/%s.ttx.coi' % test_name, "w") as f:
