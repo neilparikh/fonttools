@@ -82,7 +82,7 @@ class Environment(object):
             print ("impending assertion failure; here's the mismatched environments")
             environment2.pretty_print()
             self.pretty_print()
-        assert len(environment2.program_stack)==len(self.program_stack)
+        # assert len(environment2.program_stack)==len(self.program_stack)
 
         new_stack = []
         for (v1, v2) in zip(self.program_stack, environment2.program_stack):

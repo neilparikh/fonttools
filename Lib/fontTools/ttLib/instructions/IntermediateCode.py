@@ -232,6 +232,8 @@ class UnaryExpression(Expression):
             return self
         ue = copy.copy(self)
         ue.arg = ue.arg.eval(keep_abstract)
+        if type(ue.arg) == int and isinstance(ue.operator, NEGOperator):
+            return ue.arg * -1
         return ue
     def __repr__(self):
 	return "%s %s" % (str(self.operator), self.arg)
