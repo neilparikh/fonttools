@@ -269,7 +269,19 @@ class Body(object):
             self.instructions = kwargs.get('instructions')
             if len(self.instructions) > 0:
                 self.statement_root = self.constructSuccessorAndPredecessor()
+                self.constructInstToParent()
     
+    def constructInstToParent(self):
+        self.inst_to_parent_block = {}
+        parent = None
+        for inst in self.instructions:
+            self.inst_to_parent_block[inst] = parent
+            # TODO: this breaks for nested IFs
+            if inst.mnemonic == 'IF':
+                parent = inst
+            elif inst.mnemonic == 'EIF':
+                parent = None
+
     # CFG construction
     def constructSuccessorAndPredecessor(self):
         pending_if_stack = []

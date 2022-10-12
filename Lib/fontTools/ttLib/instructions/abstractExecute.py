@@ -1057,6 +1057,7 @@ class Executor(object):
         logger.info("in %s, calling function %d" % (self.environment.tag, callee))
         assert callee in self.bytecodeContainer.function_table, "Callee function #%s not defined" % callee
         self.current_instruction = self.bytecodeContainer.function_table[callee].start()
+        self.inst_to_parent_block = self.bytecodeContainer.function_table[callee].body.inst_to_parent_block
         self.environment.tag = "fpgm_%s" % callee
         self.environment.replace_locals_with_formals()
         self.stored_environments = {}
@@ -1145,6 +1146,7 @@ class Executor(object):
         self.environment.tag = tag
         program = self.bytecodeContainer.tag_to_programs[tag]
         self.current_instruction = program.start()
+        self.inst_to_parent_block = program.body.inst_to_parent_block
 
         self.if_else_stack = []
         self.environment.minimum_stack_depth = 0
@@ -1236,6 +1238,13 @@ class Executor(object):
                 dest = self.environment.program_stack_pop().eval(False)
                 branch_succ = self.environment.adjust_succ_for_relative_jump(self.current_instruction, dest, self.current_instruction.mnemonic)
                 logger.info("     adjusted succs now %s", self.current_instruction.successors)
+                if self.inst_to_parent_block[self.current_instruction] is not None:
+                    if self.inst_to_parent_block[branch_succ] is None:
+                        logger.info(">>>>>> leaving IF")
+                    elif self.inst_to_parent_block[branch_succ] != self.inst_to_parent_block[self.current_instruction]:
+                        logger.info("leaving IF to enter different IF")
+                    else:
+                        logger.info("jump into same IF")
                 if not is_reexecuting:
                     # first time round at this JROT/JROF statement...
                     logger.info("executing %s with dest %s, cond %s, stack height is %d, program_stack is %s" % (self.current_instruction.mnemonic, branch_succ, str(e), self.stack_depth(), str(self.environment.program_stack)))
