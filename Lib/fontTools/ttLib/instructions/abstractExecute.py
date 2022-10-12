@@ -1076,7 +1076,8 @@ class Executor(object):
             intermediateCodes = []
             for inst in self.bytecodeContainer.function_table[callee].instructions:
                 if inst not in self.ignored_insts:
-                    intermediateCodes.extend(self.bytecode2ir[inst.id])
+                    if inst.id in self.bytecode2ir:
+                        intermediateCodes.extend(self.bytecode2ir[inst.id])
             self.bytecodeContainer.IRs[tag_returned_from] = self.fixupDestsToIR(intermediateCodes)
         self.visited_functions.add(tag_returned_from)
 
@@ -1239,12 +1240,24 @@ class Executor(object):
                 branch_succ = self.environment.adjust_succ_for_relative_jump(self.current_instruction, dest, self.current_instruction.mnemonic)
                 logger.info("     adjusted succs now %s", self.current_instruction.successors)
                 if self.inst_to_parent_block[self.current_instruction] is not None:
+                    # Currently inside an IF
                     if self.inst_to_parent_block[branch_succ] is None:
-                        logger.info(">>>>>> leaving IF")
+                        # Jumping from inside an IF to outside and IF
+                        if self.if_else_stack[-1].env_on_exit is None:
+                            self.if_else_stack[-1].env_on_exit = copy.copy(self.environment)
+                        else:
+                            self.if_else_stack[-1].env_on_exit.merge(self.environment)
+                        self.environment = copy.deepcopy(self.stored_environments[self.current_instruction.id])
                     elif self.inst_to_parent_block[branch_succ] != self.inst_to_parent_block[self.current_instruction]:
                         logger.info("leaving IF to enter different IF")
                     else:
                         logger.info("jump into same IF")
+                else:
+                    if self.inst_to_parent_block[branch_succ] is not None:
+                        logger.info("entering IF from outside IF")
+                    else:
+                        logger.info("jump outside IF to outside IF")
+
                 if not is_reexecuting:
                     # first time round at this JROT/JROF statement...
                     logger.info("executing %s with dest %s, cond %s, stack height is %d, program_stack is %s" % (self.current_instruction.mnemonic, branch_succ, str(e), self.stack_depth(), str(self.environment.program_stack)))

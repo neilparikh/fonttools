@@ -149,15 +149,17 @@
       MPPEM[ ]
       PUSHW[ ]
       -2
+      POP[ ]
       IF[ ]
+      PUSH[ ]
+      1
       ELSE[ ]
       PUSHW[ ]
-      -8
+      -11
       JMPR[ ]
-      PUSH[ ]
-      9
-      ROUND[10]
       EIF[ ]
+      PUSH[ ]
+      3
       POP[ ]
       ENDF[ ]
     </assembly>
