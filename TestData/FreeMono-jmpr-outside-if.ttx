@@ -151,11 +151,8 @@
       -2
       POP[ ]
       IF[ ]
-      PUSH[ ]
-      1
-      ELSE[ ]
       PUSHW[ ]
-      -11
+      -9
       JMPR[ ]
       EIF[ ]
       PUSH[ ]
