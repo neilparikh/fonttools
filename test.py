@@ -64,6 +64,9 @@ class TestCOI(unittest.TestCase):
     def test_FreeMono_simple_if(self):
         self.common("FreeMono-simple-if")
 
+    def test_FreeMono_simple_if(self):
+        self.common("FreeMono-skip-inst")
+
 
 def regen_expected(test_name):
     actual = get_actual_output(test_name)
