@@ -1075,7 +1075,10 @@ class Executor(object):
             intermediateCodes = []
             for inst in self.bytecodeContainer.function_table[callee].instructions:
                 if inst not in self.ignored_insts:
-                    intermediateCodes.extend(self.bytecode2ir[inst.id])
+                    if inst.id in self.bytecode2ir:
+                        intermediateCodes.extend(self.bytecode2ir[inst.id])
+                    else:
+                        logger.info("Couldn't find %s in bytecode2ir" % inst)
             self.bytecodeContainer.IRs[tag_returned_from] = self.fixupDestsToIR(intermediateCodes)
         self.visited_functions.add(tag_returned_from)
 
